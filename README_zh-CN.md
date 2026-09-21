@@ -52,6 +52,8 @@ print(scores)
 
 [训练与评测复现](docs/REPRODUCE.md) · [模型实现](src/smolbge_image_embedding/modeling.py)
 
+想在 VS Code 按步骤学习数据集、清洗、缓存、微调和评测，请从[中文教程](tutorials/README_zh-CN.md)开始。
+
 当前结论限于英文 COCO 域内检索，属于自定义划分，不能等同于标准 COCO 榜单或完整 RAG 问答质量。基座可能接触过相关预训练数据；跨领域、以图搜图的检索质量尚未验证。
 
 代码与对齐头采用 [Apache-2.0](LICENSE)，基础模型及 COCO 遵循[各自条款](THIRD_PARTY.md)。

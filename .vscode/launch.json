@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug · 训练 Projector",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/train.py",
+      "args": ["--cache", "artifacts/cache", "--output", "runs/debug"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "Debug · 评测 Projector",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/evaluate.py",
+      "args": ["--cache", "artifacts/cache", "--weights", "runs/contrastive/projector.safetensors"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

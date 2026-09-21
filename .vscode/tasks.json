@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "00 · 创建 Python 环境",
+      "type": "shell",
+      "command": "python3",
+      "args": ["-m", "venv", ".venv"],
+      "problemMatcher": []
+    },
+    {
+      "label": "01 · 安装项目依赖",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["-m", "pip", "install", "-e", ".[dev]"],
+      "dependsOn": "00 · 创建 Python 环境",
+      "problemMatcher": []
+    },
+    {
+      "label": "02 · 制作 COCO 固定划分",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/prepare_coco.py", "--captions", "${workspaceFolder}/data/raw/coco/annotations/captions_val2017.json", "--images", "${workspaceFolder}/data/raw/coco/val2017", "--output", "data/processed"],
+      "problemMatcher": []
+    },
+    {
+      "label": "03 · 缓存冻结模型特征",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/cache_features.py", "--data", "data/processed", "--output", "artifacts/cache"],
+      "problemMatcher": []
+    },
+    {
+      "label": "04 · 训练 Projector",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/train.py", "--cache", "artifacts/cache", "--output", "runs/contrastive"],
+      "problemMatcher": []
+    },
+    {
+      "label": "05 · 评测训练权重",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/evaluate.py", "--cache", "artifacts/cache", "--weights", "runs/contrastive/projector.safetensors", "--output", "runs/contrastive/test_metrics.json"],
+      "problemMatcher": []
+    },
+    {
+      "label": "06 · 评测发布权重",
+      "type": "shell",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "args": ["scripts/evaluate.py", "--cache", "artifacts/cache", "--weights", "weights/projector.safetensors"],
+      "problemMatcher": []
+    }
+  ]
+}
