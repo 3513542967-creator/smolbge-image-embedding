@@ -6,6 +6,7 @@ from typing import Iterable
 
 import numpy as np
 import torch
+from huggingface_hub import snapshot_download
 from PIL import Image
 from safetensors.torch import load_file
 from torch import nn
@@ -62,7 +63,10 @@ class SmolBGEEmbedder:
         self.model_dir = Path(model_dir).resolve()
         self.config = json.loads((self.model_dir / "adapter_config.json").read_text(encoding="utf-8"))
         self.device = torch.device(device) if device is not None else default_device()
-        self.vision_dtype = torch.bfloat16 if self.device.type in {"cuda", "mps"} else torch.float32
+        use_bf16 = self.device.type == "mps" or (
+            self.device.type == "cuda" and torch.cuda.is_bf16_supported()
+        )
+        self.vision_dtype = torch.bfloat16 if use_bf16 else torch.float32
 
         self.projector = VisionProjector(
             input_dim=int(self.config["vision_dim"]),
@@ -77,10 +81,10 @@ class SmolBGEEmbedder:
         self.image_processor.do_image_splitting = False
         vision_container = AutoModelForMultimodalLM.from_pretrained(
             self.config["vision_model"], dtype=self.vision_dtype
-        ).to(self.device).eval()
-        self.vision_model = vision_container.model.vision_model
+        )
+        self.vision_model = vision_container.model.vision_model.to(self.device).eval()
         self.vision_config = vision_container.config.vision_config
-        self._vision_container = vision_container
+        del vision_container
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.config["text_model"])
         self.text_model = AutoModel.from_pretrained(
@@ -90,12 +94,31 @@ class SmolBGEEmbedder:
     @classmethod
     def from_pretrained(
         cls,
-        model_dir: str | Path,
+        model_dir: str | Path = "yifanouyang/smolbge-image-embedding",
         device: str | torch.device | None = None,
+        revision: str | None = None,
+        local_files_only: bool = False,
     ) -> "SmolBGEEmbedder":
         root = Path(model_dir)
+        if not root.exists():
+            if isinstance(model_dir, Path) or str(model_dir).startswith((".", "/", "~")):
+                raise FileNotFoundError(f"Model directory does not exist: {model_dir}")
+            root = Path(snapshot_download(
+                repo_id=str(model_dir), revision=revision,
+                local_files_only=local_files_only,
+                allow_patterns=["model/adapter_config.json", "weights/projector.safetensors"],
+            ))
         if not (root / "adapter_config.json").exists() and (root / "model" / "adapter_config.json").exists():
             root = root / "model"
+        if not (root / "adapter_config.json").is_file():
+            raise FileNotFoundError(f"No adapter_config.json found in {root}")
+        config = json.loads((root / "adapter_config.json").read_text())
+        weights = root / config["projector_path"]
+        if not weights.is_file():
+            raise FileNotFoundError("Adapter weights missing. Run git lfs pull or use from_pretrained() to download from Hugging Face.")
+        with weights.open("rb") as stream:
+            if stream.read(80).startswith(b"version https://git-lfs.github.com/spec/v1"):
+                raise ValueError("Weights are a Git LFS pointer. Run git lfs pull or use from_pretrained() to download from Hugging Face.")
         return cls(root, device=device)
 
     @torch.inference_mode()
@@ -105,6 +128,8 @@ class SmolBGEEmbedder:
         batch_size: int = 16,
     ) -> np.ndarray:
         items = list(images)
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
         if not items:
             return np.empty((0, int(self.config["embedding_dim"])), dtype=np.float32)
         outputs = []
@@ -139,6 +164,8 @@ class SmolBGEEmbedder:
         batch_size: int = 128,
     ) -> np.ndarray:
         items = list(texts)
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive")
         if is_query:
             prefix = self.config.get("query_prefix", "")
             items = [prefix + text for text in items]
@@ -163,4 +190,3 @@ class SmolBGEEmbedder:
 
     def encode_text(self, text: str, is_query: bool = False) -> np.ndarray:
         return self.encode_texts([text], is_query=is_query)[0]
-

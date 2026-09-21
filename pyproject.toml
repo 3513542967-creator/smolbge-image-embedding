@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smolbge-image-embedding"
-version = "0.1.0"
+version = "0.2.0"
 description = "Direct image embeddings aligned to the BGE-small text embedding space"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,19 +12,28 @@ license = {text = "Apache-2.0"}
 dependencies = [
   "numpy>=1.26",
   "pillow>=10.0",
+  "huggingface-hub>=0.30,<2",
+  "torchvision>=0.21",
+  "num2words>=0.5.14",
   "safetensors>=0.4",
   "scikit-learn>=1.4",
   "torch>=2.6",
-  "transformers>=5.0",
+  "transformers>=5.0,<6",
   "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.8"]
 
+[project.scripts]
+smolbge = "smolbge_image_embedding.cli:main"
+
+[project.urls]
+Repository = "https://github.com/3513542967-creator/smolbge-image-embedding"
+Model = "https://huggingface.co/yifanouyang/smolbge-image-embedding"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.ruff]
 line-length = 110
-

@@ -24,7 +24,7 @@ def encode_texts(records: list[dict], device: torch.device) -> np.ndarray:
     captions = [caption for record in records for caption in record["captions"]]
     outputs = []
     for start in tqdm(range(0, len(captions), 128), desc="BGE captions"):
-        tokens = tokenizer(captions[start : start + 128], padding=True, truncation=True, return_tensors="pt")
+        tokens = tokenizer(captions[start : start + 128], padding=True, truncation=True, max_length=128, return_tensors="pt")
         tokens = {key: value.to(device) for key, value in tokens.items()}
         with torch.inference_mode():
             cls = model(**tokens).last_hidden_state[:, 0]
@@ -80,4 +80,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -10,11 +10,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("image", type=Path)
     parser.add_argument("text")
-    parser.add_argument("--model", default=Path("."), type=Path)
+    parser.add_argument("--model", default="yifanouyang/smolbge-image-embedding")
     args = parser.parse_args()
     model = SmolBGEEmbedder.from_pretrained(args.model)
     image = model.encode_image(args.image)
-    text = model.encode_text(args.text, is_query=True)
+    text = model.encode_text(args.text)
     print({"cosine_similarity": float(image @ text), "embedding_dim": len(image)})
 
 

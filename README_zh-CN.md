@@ -1,81 +1,57 @@
-# SmolBGE 图像 Embedding
+# SmolBGE · 面向 RAG 的图像向量模型
 
-[英文主页](README.md) | [完整结果](results/evaluation.json) | [模型卡](MODEL_CARD.md)
+[English](README.md) · [GitHub](https://github.com/3513542967-creator/smolbge-image-embedding) · [模型权重](https://huggingface.co/yifanouyang/smolbge-image-embedding) · [模型卡](MODEL_CARD.md)
 
-这是一个面向多模态 RAG 的轻量图文 Embedding 模型：图片不先生成 caption，而是直接转换为 BGE 文本向量空间中的 384 维归一化向量。
+将图片与英文文本编码到同一个 **384 维向量空间**，用于图文检索。冻结 SmolVLM2 视觉编码器和 BGE-small，只训练 **3.4 MiB 对齐头**，图片直接生成向量，无需生成描述。
 
-> GitHub：`https://github.com/3513542967-creator/smolbge-image-embedding`  
-> Hugging Face：`https://huggingface.co/yifanouyang/smolbge-image-embedding`
+![模型结构](assets/architecture.svg)
 
-## 任务
+## 实验结果
 
-支持三种基础检索：
+使用 COCO val2017 的自定义划分：**4,000 张训练 / 500 张验证 / 500 张测试**，每图 5 条人工描述，随机种子 42。按图片 ID 隔离，仅用验证集选模。
 
-- 文字搜图片；
-- 图片搜文字；
-- 图片搜相似图片。
+| 方法 | 图→文 R@1 | 文→图 R@1 |
+|:--|--:|--:|
+| 线性基线 | 45.40% | 59.84% |
+| **发布模型** | **68.00%** | **60.76%** |
 
-图片侧使用 SmolVLM2-500M 的冻结视觉塔，对有效 patch token 做掩码平均，得到 768 维向量；再经过只有 887,424 个可训参数的 MLP，对齐到 BGE-small 的 384 维文本空间。
+图→文在 2,500 条描述中检索，首位命中任一配对描述即成功；文→图在 500 张图片中检索。图→文较线性基线提升 **22.6 个百分点**，配对 bootstrap 95% 区间为 +18.0～+27.2。
 
-![方法结构](assets/architecture.svg)
-
-## 数据集
-
-使用 COCO `val2017` 中的 5,000 张图，每张图保留 5 条人工 caption。
-
-| 划分 | 图片 | Caption | 用途 |
-|---|---:|---:|---|
-| 训练 | 4,000 | 20,000 | 训练对齐头 |
-| 验证 | 500 | 2,500 | 选择方法和检查点 |
-| 测试 | 500 | 2,500 | 最终盲测 |
-
-随机种子为 42，按图片 ID 隔离，同一图片的五条 caption 不会跨划分。精确 ID 在 [`data/splits/coco5k_seed42.json`](data/splits/coco5k_seed42.json)。项目不重新分发 COCO 原图。
-
-## 测试方法
-
-- **图→文**：500 张图分别检索 2,500 条 caption；对应的 5 条 caption 中任一条进入 Top-K 即成功。
-- **文→图**：2,500 条 caption 分别检索 500 张图；原始图片进入 Top-K 即成功。
-- 使用余弦相似度排序。
-- 只用验证集选模型，测试集不参与选模。
-
-## 结果
-
-| 方法 | 图→文 R@1 | 图→文 R@5 | 文→图 R@1 | 文→图 R@5 |
-|---|---:|---:|---:|---:|
-| 随机投影 | 0.00% | 0.60% | 0.04% | 0.60% |
-| Ridge 线性 | 45.40% | 78.20% | 59.84% | 86.64% |
-| 余弦 MLP | 44.60% | 76.80% | 59.96% | 86.08% |
-| **对比学习 MLP（发布版）** | **68.00%** | **90.60%** | **60.76%** | **88.16%** |
-| 多正例 MLP | 69.00% | 90.00% | 61.08% | 87.44% |
-
-![检索结果对比](results/retrieval_comparison.png)
-
-多正例模型的测试 R@1 略高，但验证集选模分数更低，因此没有在看到测试结果后更换模型。
-
-发布模型还达到：图→文 R@10 95.00%，文→图 R@10 95.12%。
+[五组对照与完整指标](results/evaluation.json) · [固定数据划分](data/splits/coco5k_seed42.json)
 
 ## 快速使用
 
+建议 Python 3.12，在虚拟环境中安装：
+
 ```bash
-python -m pip install -e .
+python -m venv .venv
+source .venv/bin/activate  # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install "git+https://github.com/3513542967-creator/smolbge-image-embedding.git"
+smolbge --images ./photos --query "a dog playing outside" --top-k 5
 ```
+
+将 `./photos` 换成你的图片文件夹，即可返回排序后的图片路径与余弦分数。首次运行自动下载对齐头和两个基础模型，需要联网并预留基座权重的磁盘空间；推理无需下载 COCO 或重新训练。自动选择 NVIDIA GPU、Apple MPS 或 CPU，也可指定 `--device cpu`。命令每次重新编码文件夹。
 
 ```python
 from smolbge_image_embedding import SmolBGEEmbedder
 
-model = SmolBGEEmbedder.from_pretrained(".")
-image = model.encode_image("example.jpg")
-text = model.encode_text("一只在户外玩的狗")
-score = float(image @ text)
+model = SmolBGEEmbedder.from_pretrained()  # 自动下载已发布权重
+images = model.encode_images(["photo.jpg"])  # (1, 384)
+query = model.encode_text("a dog playing outside")  # (384,)
+scores = images @ query
+print(scores)
 ```
 
-注意：当前训练和评测 caption 为英文，中文检索效果尚未做严格评估。
+重复查询时，可将图片向量保存至向量数据库。本地克隆并下载 Git LFS 权重后，也可使用 `SmolBGEEmbedder.from_pretrained(".")`。
 
-## 局限
+## 方法与复现
 
-- 目前只有 COCO 域内测试，还不能代表医疗、遥感、电商或文档截图。
-- 基础模型可能在预训练中见过 COCO 或相似数据。
-- 全局平均池化可能丢失小物体和空间位置信息。
-- 生产系统建议配合 OCR、元数据过滤、局部区域向量和 VLM 重排。
+- **模型对齐：**有效 patch 平均池化 → 768→768→384 MLP，仅训练 **887,424 个参数**。
+- **训练目标：**双向对比学习、描述中心向量蒸馏、困难负例间隔损失。
+- **工程实现：**冻结特征缓存、验证集早停、批量推理接口、Hub 权重下载和命令行检索。
 
-GitHub 和 Hugging Face 发布步骤见 [`PUBLISHING.md`](PUBLISHING.md)。
+[训练与评测复现](docs/REPRODUCE.md) · [模型实现](src/smolbge_image_embedding/modeling.py)
+
+当前结论限于英文 COCO 域内检索，属于自定义划分，不能等同于标准 COCO 榜单或完整 RAG 问答质量。基座可能接触过相关预训练数据；跨领域、以图搜图的检索质量尚未验证。
+
+代码与对齐头采用 [Apache-2.0](LICENSE)，基础模型及 COCO 遵循[各自条款](THIRD_PARTY.md)。
