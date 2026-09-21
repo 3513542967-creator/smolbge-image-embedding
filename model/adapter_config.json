@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "architecture": "frozen_smolvlm2_vision_plus_bge_text",
+  "vision_model": "HuggingFaceTB/SmolVLM2-500M-Video-Instruct",
+  "text_model": "BAAI/bge-small-en-v1.5",
+  "vision_pooling": "valid_patch_mean",
+  "text_pooling": "cls",
+  "projector_type": "mlp",
+  "projector_path": "../weights/projector.safetensors",
+  "vision_dim": 768,
+  "hidden_dim": 768,
+  "embedding_dim": 384,
+  "dropout": 0.1,
+  "normalized": true,
+  "query_prefix": "Represent this sentence for searching relevant passages: "
+}
+

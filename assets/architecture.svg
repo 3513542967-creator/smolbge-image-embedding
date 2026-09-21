@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">SmolBGE Image Embedding architecture</title>
+  <desc id="desc">Images pass through a frozen SmolVLM2 vision tower and a trainable MLP. Text passes through frozen BGE. Both produce normalized 384-dimensional embeddings compared by cosine similarity.</desc>
+  <defs>
+    <linearGradient id="image" x1="0" x2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
+    <linearGradient id="text" x1="0" x2="1"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#c026d3"/></linearGradient>
+    <linearGradient id="shared" x1="0" x2="1"><stop stop-color="#059669"/><stop offset="1" stop-color="#84cc16"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+    <filter id="shadow"><feDropShadow dx="0" dy="4" stdDeviation="5" flood-opacity="0.14"/></filter>
+    <style>
+      .box{rx:18;filter:url(#shadow)} .label{font-family:Inter,Arial,sans-serif;fill:#fff;font-size:22px;font-weight:700;text-anchor:middle}.small{font-family:Inter,Arial,sans-serif;fill:#e2e8f0;font-size:16px;text-anchor:middle}.dark{fill:#0f172a}.caption{font-family:Inter,Arial,sans-serif;fill:#475569;font-size:17px;text-anchor:middle}.arrow{stroke:#475569;stroke-width:4;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1200" height="520" rx="28" fill="#f8fafc"/>
+  <text x="600" y="48" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="800" text-anchor="middle" fill="#0f172a">Direct Image-to-BGE Alignment — No Caption Generation</text>
+
+  <rect class="box" x="40" y="105" width="180" height="120" fill="url(#image)"/>
+  <text class="label" x="130" y="157">Image</text><text class="small" x="130" y="187">JPG / PNG</text>
+  <rect class="box" x="300" y="105" width="245" height="120" fill="url(#image)"/>
+  <text class="label" x="422" y="151">Frozen SmolVLM2</text><text class="small" x="422" y="181">valid patch mean</text><text class="small" x="422" y="204">768-D</text>
+  <rect class="box" x="625" y="105" width="250" height="120" fill="#ea580c"/>
+  <text class="label" x="750" y="148">Trainable Projector</text><text class="small" x="750" y="178">768 → 768 → 384</text><text class="small" x="750" y="202">887,424 parameters</text>
+  <path class="arrow" d="M220 165 H290"/><path class="arrow" d="M545 165 H615"/>
+
+  <rect class="box" x="40" y="300" width="180" height="120" fill="url(#text)"/>
+  <text class="label" x="130" y="352">Text</text><text class="small" x="130" y="382">query / caption</text>
+  <rect class="box" x="300" y="300" width="245" height="120" fill="url(#text)"/>
+  <text class="label" x="422" y="346">Frozen BGE-small</text><text class="small" x="422" y="376">normalized CLS</text><text class="small" x="422" y="399">384-D</text>
+  <path class="arrow" d="M220 360 H290"/>
+
+  <rect class="box" x="950" y="202" width="210" height="125" fill="url(#shared)"/>
+  <text class="label" x="1055" y="245">Shared Space</text><text class="small" x="1055" y="275">L2-normalized 384-D</text><text class="small" x="1055" y="299">cosine similarity</text>
+  <path class="arrow" d="M875 165 C920 165 915 235 940 250"/><path class="arrow" d="M545 360 C770 360 860 350 940 285"/>
+
+  <text class="caption" x="600" y="478">Freeze both backbones · train only the adapter · index images directly for multimodal RAG</text>
+</svg>
